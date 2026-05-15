@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriFit Planner Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background-color: #e2e8f0; border: 1px solid #e2e8f0; }
+        .day-cell { min-height: 110px; background-color: white; transition: all 0.2s; padding: 8px; cursor: pointer; }
+        .day-cell:hover { background-color: #f1f5f9; }
+        .tab-content { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+    <div id="app" class="max-w-6xl mx-auto p-4 lg:p-8">
+        
+        <header class="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-indigo-600 flex items-center gap-2">
+                    <i data-lucide="activity"></i> NutriFit Pro
+                </h1>
+                <p class="text-slate-500 font-medium">Planificador Personal con IA</p>
+            </div>
+            <nav class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                <button onclick="switchTab('calendar')" id="btn-calendar" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all bg-indigo-600 text-white whitespace-nowrap">Calendario</button>
+                <button onclick="switchTab('recipes')" id="btn-recipes" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 hover:bg-slate-100 whitespace-nowrap">Recetas</button>
+                <button onclick="switchTab('workouts')" id="btn-workouts" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 hover:bg-slate-100 whitespace-nowrap">Ejercicios</button>
+                <button onclick="switchTab('shopping')" id="btn-shopping" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 hover:bg-slate-100 whitespace-nowrap">Lista Compra</button>
+                <button onclick="switchTab('config')" id="btn-config" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 hover:bg-slate-100 whitespace-nowrap"><i data-lucide="settings" class="w-4 h-4"></i></button>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Calendario -->
+            <section id="tab-calendar" class="tab-content">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-white">
+                        <h2 id="calendar-title" class="text-xl font-bold text-slate-800 capitalize">Mes</h2>
+                        <div class="flex gap-2">
+                            <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-full border border-slate-200 text-slate-600"><i data-lucide="chevron-left"></i></button>
+                            <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-full border border-slate-200 text-slate-600"><i data-lucide="chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid">
+                        <div class="p-3 text-center text-[10px] font-black text-slate-400 bg-slate-50">LUN</div>
+                        <div class="p-3 text-center text-[10px] font-black text-slate-400 bg-slate-50">MAR</div>
+                        <div class="p-3 text-center text-[10px] font-black text-slate-400 bg-slate-50">MIÉ</div>
+                        <div class="p-3 text-center text-[10px] font-black text-slate-400 bg-slate-50">JUE</div>
+                        <div class="p-3 text-center text-[10px] font-black text-slate-400 bg-slate-50">VIE</div>
+                        <div class="p-3 text-center text-[10px] font-black text-slate-400 bg-slate-50">SÁB</div>
+                        <div class="p-3 text-center text-[10px] font-black text-slate-400 bg-slate-50">DOM</div>
+                    </div>
+                    <div id="calendar-days" class="calendar-grid"></div>
+                </div>
+            </section>
+
+            <!-- Recetas -->
+            <section id="tab-recipes" class="tab-content hidden">
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                    <h2 class="text-2xl font-bold">Mis Recetas</h2>
+                    <div class="flex flex-wrap gap-2">
+                        <input type="text" id="recipe-search" oninput="filterRecipes()" placeholder="Buscar receta..." class="px-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <select id="recipe-filter-category" onchange="filterRecipes()" class="px-4 py-2 border rounded-xl text-sm outline-none">
+                            <option value="all">Todas las categorías</option>
+                            <option value="Pasta">Pasta</option>
+                            <option value="Carnes">Carnes</option>
+                            <option value="Pescados">Pescados</option>
+                            <option value="Verduras">Verduras</option>
+                            <option value="Legumbres">Legumbres</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="recipes-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+            
+            <!-- Ejercicios -->
+            <section id="tab-workouts" class="tab-content hidden">
+                <h2 class="text-2xl font-bold mb-6">Mis Entrenamientos</h2>
+                <div id="workouts-list" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- Lista de la Compra -->
+            <section id="tab-shopping" class="tab-content hidden">
+                <h2 class="text-2xl font-bold mb-6">Lista de la Compra</h2>
+                <div class="bg-white p-6 rounded-2xl border shadow-sm">
+                    <p class="text-slate-500 mb-4">Ingredientes basados en tu plan semanal:</p>
+                    <ul id="shopping-list" class="space-y-3"></ul>
+                </div>
+            </section>
+
+            <!-- Configuración -->
+            <section id="tab-config" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="space-y-6">
+                        <!-- Importar con IA -->
+                        <div class="bg-white p-6 rounded-2xl border shadow-sm">
+                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i data-lucide="brain-circuit" class="text-indigo-500"></i> Importar con IA</h3>
+                            <textarea id="ai-input" class="w-full h-40 p-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Pega texto de un PDF o una lista de recetas aquí..."></textarea>
+                            <div id="ai-status" class="hidden mb-2 p-2 rounded-lg text-xs font-medium"></div>
+                            <button onclick="processAIContent()" id="btn-ai" class="mt-3 w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex justify-center items-center gap-2">
+                                Analizar con IA
+                            </button>
+                        </div>
+
+                        <!-- Importar YouTube -->
+                        <div class="bg-white p-6 rounded-2xl border shadow-sm">
+                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-red-600"><i data-lucide="youtube"></i> Analizar YouTube</h3>
+                            <p class="text-sm text-slate-500 mb-4">Introduce la URL de un vídeo de entrenamiento.</p>
+                            <div class="flex gap-2">
+                                <input id="youtube-url" type="text" placeholder="https://www.youtube.com/watch?v=..." class="flex-grow p-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-500">
+                                <button onclick="processYouTube()" id="btn-yt" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition-all">
+                                    Analizar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Añadir Manualmente -->
+                    <div class="bg-white p-6 rounded-2xl border shadow-sm">
+                        <h3 class="text-lg font-bold mb-4">Añadir Manualmente</h3>
+                        <div class="space-y-3">
+                            <input id="manual-name" type="text" placeholder="Nombre" class="w-full p-2 border rounded-lg text-sm">
+                            <select id="manual-type" onchange="toggleManualMeta()" class="w-full p-2 border rounded-lg text-sm">
+                                <option value="recipe">Receta</option>
+                                <option value="workout">Ejercicio</option>
+                            </select>
+                            
+                            <div id="recipe-fields" class="space-y-3">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <select id="manual-category" class="w-full p-2 border rounded-lg text-sm">
+                                        <option value="Pasta">Pasta</option>
+                                        <option value="Carnes">Carnes</option>
+                                        <option value="Pescados">Pescados</option>
+                                        <option value="Verduras">Verduras</option>
+                                        <option value="Legumbres">Legumbres</option>
+                                        <option value="Otros">Otros</option>
+                                    </select>
+                                    <input id="manual-tags" type="text" placeholder="Etiquetas (separadas por comas)" class="w-full p-2 border rounded-lg text-sm">
+                                </div>
+                                <textarea id="manual-ingredients" placeholder="Ingredientes (separados por comas)" class="w-full p-2 border rounded-lg text-sm h-20"></textarea>
+                                <textarea id="manual-steps" placeholder="Pasos de preparación..." class="w-full p-2 border rounded-lg text-sm h-32"></textarea>
+                            </div>
+                            <button onclick="addManualItem()" class="w-full bg-slate-800 text-white py-3 rounded-xl text-sm font-bold mt-2">Guardar</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modal Principal -->
+        <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+                <div class="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
+                    <h3 id="modal-title" class="font-bold text-lg">Detalles</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-900 p-1"><i data-lucide="x"></i></button>
+                </div>
+                <div id="modal-options" class="p-6 space-y-4 overflow-y-auto custom-scroll"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const apiKey = ""; // Inyectada por el entorno
+        const firebaseConfig = {
+            apiKey: "AIzaSyClNjmp3jxCN3LJ5egAY_QtVZ-0GbPbS6Y",
+            authDomain: "nutrifit-planner-846ca.firebaseapp.com",
+            projectId: "nutrifit-planner-846ca",
+            storageBucket: "nutrifit-planner-846ca.firebasestorage.app",
+            messagingSenderId: "348981137783",
+            appId: "1:348981137783:web:2b6bc307ec288ef1025172"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        let plannerData = {}; 
+        let library = { recipes: [], workouts: [] }; 
+        let selectedDay = null;
+        let editingRecipeIndex = null;
+
+        async function loadAllData() {
+            try {
+                const planSnap = await getDoc(doc(db, "usuario", "planificacion"));
+                if (planSnap.exists()) plannerData = planSnap.data().data || {};
+                
+                const libSnap = await getDoc(doc(db, "usuario", "biblioteca"));
+                if (libSnap.exists()) {
+                    library = libSnap.data();
+                }
+            } catch (e) { console.error(e); }
+            renderCalendar();
+            updateShoppingList();
+        }
+
+        async function savePlanner() {
+            await setDoc(doc(db, "usuario", "planificacion"), { data: plannerData });
+            updateShoppingList();
+            renderCalendar();
+        }
+
+        async function saveLibrary() {
+            await setDoc(doc(db, "usuario", "biblioteca"), library);
+        }
+
+        async function callGemini(prompt, retries = 0) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { 
+                            responseMimeType: "application/json",
+                            temperature: 0.2
+                        }
+                    })
+                });
+
+                if (!response.ok) throw new Error('API Error');
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                return JSON.parse(jsonText);
+            } catch (error) {
+                if (retries < 3) {
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, retries)));
+                    return callGemini(prompt, retries + 1);
+                }
+                throw error;
+            }
+        }
+
+        window.processYouTube = async () => {
+            const url = document.getElementById('youtube-url').value;
+            const btn = document.getElementById('btn-yt');
+            if (!url.includes('youtube.com') && !url.includes('youtu.be')) return;
+
+            btn.disabled = true;
+            btn.innerText = "Procesando...";
+
+            const prompt = `Analiza el contenido sugerido por este enlace de YouTube: ${url}. 
+            Extrae el nombre del entrenamiento o rutina que describe. 
+            Responde ÚNICAMENTE con un objeto JSON siguiendo este esquema: {"workouts": [{"name": "Nombre de la rutina"}]}`;
+
+            try {
+                const data = await callGemini(prompt);
+                if (data.workouts && data.workouts.length > 0) {
+                    library.workouts.push(...data.workouts);
+                    await saveLibrary();
+                    document.getElementById('youtube-url').value = "";
+                    alert("¡Entrenamiento añadido con éxito!");
+                }
+            } catch (e) {
+                alert("Error al analizar el enlace. Por favor, asegúrate de que el enlace sea correcto.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Analizar";
+            }
+        };
+
+        window.processAIContent = async () => {
+            const text = document.getElementById('ai-input').value;
+            const btn = document.getElementById('btn-ai');
+            if (!text.trim()) return;
+
+            btn.disabled = true;
+            showStatus("Analizando y categorizando...", "bg-indigo-100 text-indigo-700");
+
+            const prompt = `Analiza el siguiente texto para extraer recetas y ejercicios. 
+            Para cada receta, asígnale una categoría de estas: Pasta, Carnes, Pescados, Verduras, Legumbres, Otros. 
+            Genera una lista de etiquetas descriptivas cortas.
+            Texto: ${text}
+            Responde ÚNICAMENTE en JSON con este esquema: 
+            {"recipes": [{"name": "Nombre", "category": "Categoría", "tags": ["tag1"], "ingredients": ["item1"], "steps": "texto"}], "workouts": [{"name": "Nombre"}]}`;
+
+            try {
+                const data = await callGemini(prompt);
+                if (data.recipes) library.recipes.push(...data.recipes);
+                if (data.workouts) library.workouts.push(...data.workouts);
+                await saveLibrary();
+                document.getElementById('ai-input').value = "";
+                showStatus("¡Importación finalizada!", "bg-emerald-100 text-emerald-700");
+            } catch (e) {
+                showStatus("Error al procesar el texto.", "bg-red-100 text-red-700");
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => document.getElementById('ai-status').classList.add('hidden'), 3000);
+            }
+        };
+
+        function showStatus(msg, classes) {
+            const status = document.getElementById('ai-status');
+            status.innerText = msg;
+            status.className = `mb-2 p-3 rounded-xl text-sm font-medium ${classes}`;
+            status.classList.remove('hidden');
+        }
+
+        window.toggleManualMeta = () => {
+            const type = document.getElementById('manual-type').value;
+            document.getElementById('recipe-fields').style.display = type === 'recipe' ? 'block' : 'none';
+        };
+
+        window.addManualItem = async () => {
+            const name = document.getElementById('manual-name').value;
+            const type = document.getElementById('manual-type').value;
+            if (!name) return;
+
+            if (type === 'recipe') {
+                const category = document.getElementById('manual-category').value;
+                const tags = document.getElementById('manual-tags').value.split(',').map(t => t.trim()).filter(t => t);
+                const ingredients = document.getElementById('manual-ingredients').value.split(',').map(i => i.trim()).filter(i => i);
+                const steps = document.getElementById('manual-steps').value;
+                library.recipes.push({ name, category, tags, ingredients, steps });
+            } else {
+                library.workouts.push({ name });
+            }
+
+            await saveLibrary();
+            document.getElementById('manual-name').value = "";
+            document.getElementById('manual-tags').value = "";
+            document.getElementById('manual-ingredients').value = "";
+            document.getElementById('manual-steps').value = "";
+            alert("Añadido a la biblioteca.");
+        };
+
+        window.filterRecipes = () => {
+            const search = document.getElementById('recipe-search').value.toLowerCase();
+            const category = document.getElementById('recipe-filter-category').value;
+            const filtered = library.recipes.filter(r => {
+                const matchesSearch = r.name.toLowerCase().includes(search) || (r.tags && r.tags.some(t => t.toLowerCase().includes(search)));
+                const matchesCat = category === 'all' || r.category === category;
+                return matchesSearch && matchesCat;
+            });
+            renderRecipeCards(filtered);
+        };
+
+        function renderRecipeCards(recipes) {
+            const list = document.getElementById('recipes-list');
+            if (!list) return;
+            list.innerHTML = recipes.map((r, idx) => `
+                <div class="bg-white rounded-2xl border shadow-sm flex flex-col h-full hover:shadow-md transition-all border-t-4 ${getCategoryBorder(r.category)}">
+                    <div class="p-5 flex flex-col h-full">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 mb-1 inline-block uppercase">${r.category || 'Otros'}</span>
+                                <h3 class="font-bold text-slate-800">${r.name}</h3>
+                            </div>
+                            <button onclick="deleteFromLibrary('${r.name}', 'recipe')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                        <div class="flex flex-wrap gap-1 mb-3">
+                            ${(r.tags || []).map(t => `<span class="text-[9px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md">#${t}</span>`).join('')}
+                        </div>
+                        <div class="mt-auto flex justify-between items-center pt-3 border-t border-slate-50">
+                             <button onclick="viewDetail('${r.name}')" class="text-xs font-bold text-indigo-600">Ver / Editar</button>
+                             <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300"></i>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function getCategoryBorder(cat) {
+            const maps = { Pasta: 'border-t-yellow-400', Carnes: 'border-t-red-400', Pescados: 'border-t-blue-400', Verduras: 'border-t-emerald-400', Legumbres: 'border-t-orange-400' };
+            return maps[cat] || 'border-t-indigo-400';
+        }
+
+        window.viewDetail = (name) => {
+            const index = library.recipes.findIndex(r => r.name === name);
+            const recipe = library.recipes[index];
+            if (!recipe) return;
+            
+            editingRecipeIndex = index;
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal-title').innerText = "Detalle de Receta";
+            
+            const options = document.getElementById('modal-options');
+            options.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-indigo-50 p-4 rounded-xl">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] font-black uppercase text-indigo-400">Ingredientes</span>
+                            <span class="text-[10px] bg-white px-2 py-0.5 rounded border text-indigo-600 font-bold">${recipe.category || 'Otros'}</span>
+                        </div>
+                        <p class="text-sm text-slate-700">${recipe.ingredients ? recipe.ingredients.join(', ') : 'No listados'}</p>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-slate-400 block mb-1">Preparación</span>
+                        <div class="bg-white p-4 rounded-xl border text-sm text-slate-600 whitespace-pre-wrap">${recipe.steps || 'Sin pasos.'}</div>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button onclick="editRecipeForm(${index})" class="flex-grow py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm">Editar Receta</button>
+                        <button onclick="openDay('${selectedDay || 'config'}')" class="px-6 py-3 bg-slate-100 rounded-xl font-bold text-sm text-slate-600">Cerrar</button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        window.editRecipeForm = (index) => {
+            const recipe = library.recipes[index];
+            const options = document.getElementById('modal-options');
+            document.getElementById('modal-title').innerText = "Editar Receta";
+
+            options.innerHTML = `
+                <div class="space-y-3">
+                    <input id="edit-name" type="text" value="${recipe.name}" class="w-full p-2 border rounded-lg text-sm font-bold">
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="edit-category" class="w-full p-2 border rounded-lg text-sm">
+                            <option value="Pasta" ${recipe.category === 'Pasta' ? 'selected' : ''}>Pasta</option>
+                            <option value="Carnes" ${recipe.category === 'Carnes' ? 'selected' : ''}>Carnes</option>
+                            <option value="Pescados" ${recipe.category === 'Pescados' ? 'selected' : ''}>Pescados</option>
+                            <option value="Verduras" ${recipe.category === 'Verduras' ? 'selected' : ''}>Verduras</option>
+                            <option value="Legumbres" ${recipe.category === 'Legumbres' ? 'selected' : ''}>Legumbres</option>
+                            <option value="Otros" ${recipe.category === 'Otros' ? 'selected' : ''}>Otros</option>
+                        </select>
+                        <input id="edit-tags" type="text" value="${(recipe.tags || []).join(', ')}" placeholder="Etiquetas..." class="w-full p-2 border rounded-lg text-sm">
+                    </div>
+                    <textarea id="edit-ingredients" class="w-full p-2 border rounded-lg text-sm h-24" placeholder="Ingredientes...">${(recipe.ingredients || []).join(', ')}</textarea>
+                    <textarea id="edit-steps" class="w-full p-2 border rounded-lg text-sm h-40" placeholder="Pasos...">${recipe.steps || ''}</textarea>
+                    <div class="flex gap-2">
+                        <button onclick="saveEditedRecipe(${index})" class="flex-grow py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm">Guardar Cambios</button>
+                        <button onclick="viewDetail('${recipe.name}')" class="px-6 py-3 bg-slate-100 rounded-xl font-bold text-sm text-slate-600">Cancelar</button>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.saveEditedRecipe = async (index) => {
+            const recipe = library.recipes[index];
+            recipe.name = document.getElementById('edit-name').value;
+            recipe.category = document.getElementById('edit-category').value;
+            recipe.tags = document.getElementById('edit-tags').value.split(',').map(t => t.trim()).filter(t => t);
+            recipe.ingredients = document.getElementById('edit-ingredients').value.split(',').map(i => i.trim()).filter(i => i);
+            recipe.steps = document.getElementById('edit-steps').value;
+
+            await saveLibrary();
+            alert("Receta actualizada.");
+            viewDetail(recipe.name);
+            if (document.getElementById('tab-recipes').classList.contains('hidden') === false) {
+                renderRecipeCards(library.recipes);
+            }
+        };
+
+        function updateShoppingList() {
+            const listEl = document.getElementById('shopping-list');
+            const ingredients = new Set();
+            Object.values(plannerData).forEach(items => {
+                items.forEach(it => {
+                    const r = library.recipes.find(rec => rec.name === it.name);
+                    if (r && r.ingredients) r.ingredients.forEach(i => ingredients.add(i));
+                });
+            });
+
+            if (ingredients.size === 0) {
+                listEl.innerHTML = '<li class="text-slate-400 italic text-sm">Añade recetas al calendario para ver los ingredientes.</li>';
+                return;
+            }
+
+            listEl.innerHTML = Array.from(ingredients).map(ing => `
+                <li class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <input type="checkbox" class="w-4 h-4 rounded text-indigo-600">
+                    <span class="text-sm font-medium capitalize text-slate-700">${ing}</span>
+                </li>
+            `).join('');
+        }
+
+        function renderCalendar() {
+            const container = document.getElementById('calendar-days');
+            const date = new Date(currentYear, currentMonth, 1);
+            document.getElementById('calendar-title').innerText = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(date);
+
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const startDay = (new Date(currentYear, currentMonth, 1).getDay() + 6) % 7;
+
+            container.innerHTML = '';
+            for (let i = 0; i < startDay; i++) container.innerHTML += `<div class="bg-slate-50/50"></div>`;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const key = `${currentYear}-${currentMonth + 1}-${d}`;
+                const items = plannerData[key] || [];
+                container.innerHTML += `
+                    <div onclick="openDay('${key}')" class="day-cell">
+                        <span class="text-xs font-bold text-slate-400">${d}</span>
+                        <div class="mt-1 space-y-1">
+                            ${items.map(it => `
+                                <div class="text-[9px] ${it.type === 'recipe' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'} p-0.5 rounded truncate border font-bold">
+                                    ${it.name}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        window.openDay = (key) => {
+            selectedDay = key;
+            document.getElementById('modal').classList.remove('hidden');
+            const options = document.getElementById('modal-options');
+            const items = plannerData[key] || [];
+
+            options.innerHTML = `
+                <div class="space-y-6">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Añadir Receta</p>
+                        <div class="space-y-1">
+                            ${library.recipes.map(r => `
+                                <div class="flex gap-1">
+                                    <button onclick="addItem('${r.name}', 'recipe')" class="flex-grow p-2 border rounded-lg text-left hover:bg-indigo-50 text-xs flex justify-between items-center">
+                                        <span>${r.name}</span> <i data-lucide="plus" class="w-3 h-3"></i>
+                                    </button>
+                                    <button onclick="viewDetail('${r.name}')" class="p-2 border rounded-lg text-slate-400"><i data-lucide="eye" class="w-3 h-3"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest text-emerald-600">Añadir Ejercicio</p>
+                        <div class="space-y-1">
+                            ${library.workouts.map(w => `
+                                <button onclick="addItem('${w.name}', 'workout')" class="w-full p-2 border rounded-lg text-left hover:bg-emerald-50 text-xs flex justify-between items-center">
+                                    <span>${w.name}</span> <i data-lucide="plus" class="w-3 h-3 text-emerald-400"></i>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ${items.length > 0 ? `
+                        <div class="pt-4 border-t">
+                            <p class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Plan de Hoy</p>
+                            ${items.map((it, idx) => `
+                                <div class="flex justify-between items-center p-2 bg-slate-50 rounded-lg text-xs mb-1">
+                                    <span>${it.name}</span>
+                                    <button onclick="removeItem(${idx})" class="text-red-400"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            lucide.createIcons();
+        };
+
+        window.addItem = (name, type) => {
+            if (!plannerData[selectedDay]) plannerData[selectedDay] = [];
+            plannerData[selectedDay].push({ name, type });
+            savePlanner();
+            openDay(selectedDay);
+        };
+
+        window.removeItem = (idx) => {
+            plannerData[selectedDay].splice(idx, 1);
+            if (plannerData[selectedDay].length === 0) delete plannerData[selectedDay];
+            savePlanner();
+            openDay(selectedDay);
+        };
+
+        window.closeModal = () => document.getElementById('modal').classList.add('hidden');
+        window.changeMonth = (d) => { currentMonth += d; if (currentMonth > 11) { currentMonth = 0; currentYear++; } else if (currentMonth < 0) { currentMonth = 11; currentYear--; } renderCalendar(); };
+
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('bg-indigo-600', 'text-white'));
+            document.getElementById(`btn-${tab}`).classList.add('bg-indigo-600', 'text-white');
+            if (tab === 'recipes') renderRecipeCards(library.recipes);
+            if (tab === 'workouts') {
+                document.getElementById('workouts-list').innerHTML = library.workouts.map(e => `
+                    <div class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-center">
+                        <span class="text-sm font-bold text-slate-700">${e.name}</span>
+                        <button onclick="deleteFromLibrary('${e.name}', 'workout')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        };
+
+        window.deleteFromLibrary = async (name, type) => {
+            if (type === 'recipe') library.recipes = library.recipes.filter(r => r.name !== name);
+            else library.workouts = library.workouts.filter(e => e.name !== name);
+            await saveLibrary();
+            switchTab(type === 'recipe' ? 'recipes' : 'workouts');
+        };
+
+        loadAllData();
+    </script>
+</body>
+</html>
